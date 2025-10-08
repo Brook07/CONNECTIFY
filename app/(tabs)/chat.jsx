@@ -1,3 +1,4 @@
+import 'react-native-get-random-values';
 import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import Fuse from 'fuse.js';
@@ -21,6 +22,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native'; 
 import { useCallback } from 'react';
 
+import CryptoJS from "crypto-js";
+
 
 import io from "socket.io-client";
 
@@ -38,6 +41,8 @@ const MessageScreen = () => {
   const [chatToDelete, setChatToDelete] = useState(null);
 const [showDeleteModal, setShowDeleteModal] = useState(false);
 const [showConfirmModal, setShowConfirmModal] = useState(false);
+const SHARED_SECRET_KEY = "supersecretkey123";
+
 
   const router= useRouter();
 
@@ -54,6 +59,8 @@ const [showConfirmModal, setShowConfirmModal] = useState(false);
   // Fetch all message requests and filter out self
   useFocusEffect(
     useCallback(() => {
+
+
       if (!userId) return;
   
       setLoading(true);
@@ -68,7 +75,8 @@ const [showConfirmModal, setShowConfirmModal] = useState(false);
     }, [userId])
   );
 
-    useEffect(() => {
+  useFocusEffect(
+    useCallback(() => {
   if (!userId) return;
 
   // Load cached ongoing messages from AsyncStorage immediately
@@ -110,7 +118,7 @@ const [showConfirmModal, setShowConfirmModal] = useState(false);
   return () => {
     socket.off("chat_updated");
   };
-}, [userId]);
+}, [userId]));
 
 
     ///new ajasjdhjashdasdhashdksahdjhajsdhajs
@@ -307,7 +315,21 @@ useEffect(() => {
 
   };
 
- 
+ const decryptMessage= (encrypted)=>{
+
+  if (!encrypted) {
+    return "You accepted the message request";
+  }
+
+
+  const res=  CryptoJS.AES.decrypt(encrypted, SHARED_SECRET_KEY).toString(CryptoJS.enc.Utf8);
+  
+  if (!res) {
+    return "You recieved a new message request";
+  }
+  
+  return res;
+ }
 
   const renderMessageItem = ({ item, isRequest }) => (
     <Pressable
@@ -327,7 +349,8 @@ useEffect(() => {
         <Text style={styles.name}>{item.name}</Text>
     {/*   <Text numberOfLines={1} style={!readMessages[item.id] ? styles.boldPreview : styles.preview}> */}
         <Text numberOfLines={1} style={ styles.preview}>
-          {item.message}
+          
+          {decryptMessage(item.message)}
         </Text>
       </View>
       <Text style={styles.timestamp}>{formatTime(item.timestamp)}</Text>

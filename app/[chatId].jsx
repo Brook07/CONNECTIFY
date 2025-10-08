@@ -1,3 +1,4 @@
+import 'react-native-get-random-values';
 import { Entypo, Feather } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
@@ -14,18 +15,17 @@ import {
 } from "react-native";
 
 import { useLocalSearchParams } from "expo-router";
-import 'react-native-get-random-values';
-import { v4 as uuidv4 } from 'uuid';
+
+
 import SimpleEmojiPicker from './hooks/SimpleEmojiPicker'; // Adjust path as needed
 import useGetUserID from "./hooks/useGetUserID";
+import CryptoJS from "crypto-js";
 
-
-
-
-
+import { v4 as uuidv4 } from 'uuid';
 import io from "socket.io-client";
 import { BASE_URL } from "../config/config"; // adjust the path as needed
 const socket = io(`${BASE_URL}`);  // Localhost for Android emulator
+
 
 
 const ChatMessagesScreen = () => {
@@ -40,6 +40,10 @@ const ChatMessagesScreen = () => {
   const [message, setMessage] = useState("");
   const navigation = useNavigation();
   const scrollViewRef = useRef(null);
+const SHARED_SECRET_KEY = "supersecretkey123";
+    const [messageToDelete, setMessageToDelete] = useState(null);
+   // const uuidv4 = () => Math.random().toString(36).substring(2, 15);
+
 
 
 
@@ -91,8 +95,15 @@ useEffect(()=>{
      setTimeout(() => scrollToBottom(), 100); // Ensures auto-scroll after render
   });
 
+  socket.on("messageDeleted", ({ messageId }) => {
+  setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+});
+
+
   return () => {
     socket.off("receiveMessage");
+    socket.off("receiveMessage");
+  socket.off("messageDeleted");
   };
 }, [chatId, userId]);
 
@@ -128,11 +139,13 @@ const pickImage = async () => {
     aspect: [4, 3],
     quality: 1,
   });
-
+  const message= 'Photo file(s) are received.'
+  const encryptedText = CryptoJS.AES.encrypt(message, SHARED_SECRET_KEY).toString();
   if (!result.canceled) {
     const newImageMessage = {
       _id: uuidv4(),
       messageType: "image",
+      message:encryptedText,
       imageUrl: result.uri,
       timeStamp: new Date(),
       senderId: userId,
@@ -149,10 +162,14 @@ const pickImage = async () => {
 const handleSend = () => {
   if (!message.trim()) return;
 
+  const encryptedText = CryptoJS.AES.encrypt(message, SHARED_SECRET_KEY).toString();
+
+
   const newMessage = {
     _id: uuidv4(),
     messageType: "text",
-    message: message,
+    message: encryptedText,
+   
     timeStamp: new Date(),
     senderId: userId,
     chatId: chatId,
@@ -167,17 +184,24 @@ const handleSend = () => {
 
 
   const handleSelectMessage = (msg) => {
-    const isSelected = selectedMessages.includes(msg._id);
-    if (isSelected) {
-      setSelectedMessages((prev) => prev.filter((id) => id !== msg._id));
-    } else {
-      setSelectedMessages((prev) => [...prev, msg._id]);
-    }
-  };
+  if (selectedMessages.includes(msg._id)) {
+    setSelectedMessages([]);
+  } else {
+    setSelectedMessages([msg._id]);
+  }};
+
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: "#F0F0F0" }}>
+      <Pressable
+  onPress={() => {
+    if (messageToDelete) setMessageToDelete(null);
+  }}
+  style={{ flex: 1 }}
+>
+
       <ScrollView
+      style={{paddingTop:25}}
         ref={scrollViewRef}
         contentContainerStyle={{ flexGrow: 1 }}
         onContentSizeChange={handleContentSizeChange}
@@ -185,12 +209,13 @@ const handleSend = () => {
         {messages.map((item, index) => {
           const isSelected = selectedMessages.includes(item._id);
           const isSelf = item.sender_id === userId;
-
+         
           if (item.message_type === "text") {
+            const decryptedMessage = CryptoJS.AES.decrypt(item.message, SHARED_SECRET_KEY).toString(CryptoJS.enc.Utf8);
             return (
               <Pressable
                 key={index}
-                onLongPress={() => handleSelectMessage(item)}
+                onLongPress={() => setMessageToDelete(item)}
                 style={[
                   {
                     alignSelf: isSelf ? "flex-end" : "flex-start",
@@ -209,7 +234,7 @@ const handleSend = () => {
                     textAlign: isSelected ? "right" : "left",
                   }}
                 >
-                  {item.message}
+                  {decryptedMessage}
                 </Text>
                 <Text
                   style={{
@@ -260,6 +285,7 @@ const handleSend = () => {
           }
         })}
       </ScrollView>
+      </Pressable>
 
       <View
         style={{
@@ -327,6 +353,48 @@ const handleSend = () => {
     }}
   />
 )}
+
+
+
+
+
+
+
+{messageToDelete!= null && (
+  <View
+    style={{
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: "#fff",
+      padding: 10,
+      borderTopWidth: 1,
+      borderColor: "#ccc",
+      flexDirection: "row",
+      justifyContent: "center",
+    }}
+  >
+    <Pressable
+    
+      onPress={async () => {
+        // Delete each selected message
+        const messageId = messageToDelete.id;
+        socket.emit("deleteMessage", { messageId, chatId });
+
+       // setMessages((prev) => prev.filter((msg) => msg._id !== messageId));
+        //setSelectedMessages([]);
+        setMessageToDelete(null);
+      }}
+    >
+      <Feather name="trash-2" size={24} color="red" />
+    </Pressable>
+  </View>
+)}
+
+
+
+
 
     </KeyboardAvoidingView>
   );

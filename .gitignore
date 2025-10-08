@@ -21,6 +21,8 @@ expo-env.d.ts
 # config
 # config/
 
+.env
+
 # Metro
 .metro-health-check*
 
