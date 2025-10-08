@@ -1,6 +1,6 @@
 // const express = require("express") old way of importing modules
 import express from 'express';
-import { sql } from './config/db.js';
+import { sql } from '../config/db.js';
 import dotenv from 'dotenv';
 
 dotenv.config();

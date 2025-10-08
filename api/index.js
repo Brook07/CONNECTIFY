@@ -23,6 +23,9 @@ app.use(cors());
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+//app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static('uploads'));
+
 
 // Listen for connection
 io.on("connection", (socket) => {
@@ -35,7 +38,7 @@ io.on("connection", (socket) => {
 
 
   // to update a specific user's request page:
-   socket.on("receiveTexts", (userId) => {
+  socket.on("receiveTexts", (userId) => {
     socket.join(userId);
   });
 
@@ -52,7 +55,7 @@ io.on("connection", (socket) => {
   // Listen for messages and emit to room
   socket.on("sendMessage", async (message) => {
     // Save message to DB here:
-    const [result]= await db.promise().query(
+    const [result] = await db.promise().query(
       "INSERT INTO messages (chat_id, sender_id, message_type, message, image_url, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
       [
         message.chatId,
@@ -64,44 +67,44 @@ io.on("connection", (socket) => {
       ]
     );
 
-      const insertedMessageId = result.insertId;  // <-- This is the new message's ID
+    const insertedMessageId = result.insertId;  // <-- This is the new message's ID
 
 
-await db.promise().query(
-  `UPDATE ongoing_chats SET last_message1=CASE WHEN user2_id=? THEN ? ELSE last_message1 END,last_message2=CASE WHEN user1_id=? THEN ? ELSE last_message2 END WHERE id=?
+    await db.promise().query(
+      `UPDATE ongoing_chats SET last_message1=CASE WHEN user2_id=? THEN ? ELSE last_message1 END,last_message2=CASE WHEN user1_id=? THEN ? ELSE last_message2 END WHERE id=?
 `,
-  [
-    message.senderId,
-    //message.messageType === "text" ? message.message : "Image.jpg",
-    insertedMessageId,
-    message.senderId,
-    insertedMessageId,
-   // message.messageType === "text" ? message.message : "Image.jpg",
-    message.chatId,
-  ]
-);
+      [
+        message.senderId,
+        //message.messageType === "text" ? message.message : "Image.jpg",
+        insertedMessageId,
+        message.senderId,
+        insertedMessageId,
+        // message.messageType === "text" ? message.message : "Image.jpg",
+        message.chatId,
+      ]
+    );
 
 
     // ✅ Broadcast the message to everyone in the room, including sender
-  io.to(message.chatId).emit("receiveMessage", {
-    ...message,
-    timestamp: message.timeStamp,  // backend may overwrite this
-    sender_id: message.senderId,
-    message_type: message.messageType,
-    message: message.message,
-    image_url: message.imageUrl,
+    io.to(message.chatId).emit("receiveMessage", {
+      ...message,
+      timestamp: message.timeStamp,  // backend may overwrite this
+      sender_id: message.senderId,
+      message_type: message.messageType,
+      message: message.message,
+      image_url: message.imageUrl,
+    });
+
+
+
+    io.to(message.senderId).emit("chat_updated", { userId: message.senderId });
+    io.to(message.receiverId).emit("chat_updated", {
+      userId: message.receiverId
+    });
+
   });
 
 
-
-  io.to(message.senderId).emit("chat_updated", { userId: message.senderId });
-  io.to(message.receiverId).emit("chat_updated", {
-    userId: message.receiverId
-  });
-
-  });
-
-  
 
   socket.on("disconnect", () => {
     console.log("User disconnected");
@@ -112,6 +115,50 @@ await db.promise().query(
 server.listen(port, () => {
   console.log(` Server + Socket.IO running on http://localhost:${port}`);
 });
+
+
+
+// Disk storage config
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/'); // Make sure this directory exists
+  },
+  filename: function (req, file, cb) {
+    const filename = Date.now() + '-' + file.originalname;
+    cb(null, filename);
+  }
+});
+
+
+const upload = multer({ storage });
+
+app.post('/upload-img', upload.single('img'), async (req, res) => {
+  try {
+    const userId = req.body.userId;
+    const chatId = req.body.chatId;
+
+    const file = req.file;
+
+    if (!file) return res.status(400).json({ error: "No file uploaded" });
+
+    const imagePath = `/uploads/${file.filename}`;
+
+    // Insert message into DB as an image message
+    const [result] = await db.promise().query(
+      `INSERT INTO messages (chat_id, sender_id, message_type, message, image_url) VALUES (?, ?, 'image',? ,?)`,
+      [chatId, userId,'' ,imagePath]
+    );
+
+    // Respond with image URL and inserted message ID (optional)
+    res.json({ imageUrl: imagePath, messageId: result.insertId });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Upload failed" });
+  }
+});
+
+
 
 
 app.post('/get-user-id', (req, res) => {
@@ -142,14 +189,20 @@ app.post('/api/add-user', (req, res) => {
     console.log("Started checking for exisitng user.")
     if (err) {
       console.error("❌ DB error:", err);
-      return res.status(500).json({ error: 'DB error' })}
- 
+      return res.status(500).json({ error: 'DB error' })
+    }
+
+    console.log("📊 Query results:", results.length, "users found");
+
     if (results.length === 0) {
       db.query('INSERT INTO users (email) VALUES (?)', [email], (err2, result) => {
-        if (err2) return res.status(500).json({ error: 'DB insert error' });
-        res.status(200).json({ success: true, userId: result.insertId });
+        if (err2) return res.status(500).json({ error: err2 });
+        if (!err2) {
+          console.log("Inserted.");
+          console.log(result.insertId);
+          res.status(200).json({ success: true, userId: result.insertId });
+        }
       });
-      console.log("Inserted.")
     } else {
       console.log("Already existing user.")
       res.status(200).json({ message: 'User already exists.' });
@@ -209,9 +262,9 @@ app.get('/requests/:userId', (req, res) => {
 });
 
 // geet ongoing chat history.
-app.get('/ongoing_messages/:userId', (req,res)=>{
-  const userId= req.params.userId;
-// chalirako query
+app.get('/ongoing_messages/:userId', (req, res) => {
+  const userId = req.params.userId;
+  // chalirako query
   //SELECT ongoing_chats.id AS id, ongoing_chats.started_at as timestamp ,ongoing_chats.last_message as message, users.id AS userId, users.name, users.profile_image AS image FROM ongoing_chats INNER JOIN users ON ongoing_chats.user2_id = users.id WHERE ongoing_chats.user2_id = ?
 
   //Select ongoing_chats.id AS id, ongoing_chats.started_at as timestamp ,ongoing_chats.last_message as message from ongoing_chats where ongoing_chats.user1_id= ? or ongoing_chats.user2_id= ?
@@ -233,9 +286,9 @@ app.get('/ongoing_messages/:userId', (req,res)=>{
     `SELECT ongoing_chats.id AS id, messages.message AS message, IFNULL(messages.timestamp,ongoing_chats.started_at) AS timestamp, users.id AS userId, users.name, users.profile_image FROM ongoing_chats INNER JOIN users ON (users.id=ongoing_chats.user1_id AND ongoing_chats.user2_id=?) OR (users.id=ongoing_chats.user2_id AND ongoing_chats.user1_id=?) LEFT JOIN messages ON messages.id=IF(ongoing_chats.user1_id=?, ongoing_chats.last_message1, ongoing_chats.last_message2)
 
 
-`,    [userId, userId, userId],
-    (err, results)=>{
-      if (err) return res.status(500).json({error: err.message});
+`, [userId, userId, userId],
+    (err, results) => {
+      if (err) return res.status(500).json({ error: err.message });
       res.json(results);
     }
   );
@@ -302,13 +355,13 @@ app.post('/chat/:chatId/message', (req, res) => {
   );
 });
 
-app.get('/chat/:chatId/recipientId', (req, res)=>{
+app.get('/chat/:chatId/recipientId', (req, res) => {
   const chatId = req.params.chatId;
 
   db.query(
-    'select * from ongoing_chats where id= ?', [chatId], (err, results)=>{
-      if (err) return res.status(500).json({error: err.message});
-      if (results.length=== 0) return res.status(404).json({ error: 'Chat not found' });
+    'select * from ongoing_chats where id= ?', [chatId], (err, results) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (results.length === 0) return res.status(404).json({ error: 'Chat not found' });
       res.json(results[0]);
     }
   );

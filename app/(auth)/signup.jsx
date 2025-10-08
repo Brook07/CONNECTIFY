@@ -1,20 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useSignUp } from '@clerk/clerk-expo';
-import { Pressable, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList } from 'react-native';
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { BASE_URL } from "../../config/config"; // adjust the path as needed
-
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList, ActivityIndicator } from 'react-native';
+import VerificationScreen from '../../components/VerificationScreen';
 
 export default function SignUpScreen() {
-  const { signUp, isLoaded, setActive } = useSignUp();
+  const { signUp, isLoaded } = useSignUp();
   const [pendingVerification, setPendingVerification] = useState(false);
-  const [code, setCode] = useState('');
   const [emailAddress, setEmailAddress] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const onShowPassword = () => {
     if (showPassword) {
@@ -24,14 +23,23 @@ export default function SignUpScreen() {
     }
   }
 
+  if (!isLoaded) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#008000" />
+      </View>
+    );
+  }
 
   // handle submission of sign up form
   const handleSignUp = async () => {
 
     setError(undefined);
-
+    setLoading(true);
     if (!emailAddress || !password) {
+      setLoading(false);
       Alert.alert('Error', 'Please fill in all fields');
+      // setError('Please fill in all fields');
       return;
     }
 
@@ -55,12 +63,8 @@ export default function SignUpScreen() {
     }
     catch (err) {
       console.error(JSON.stringify(err, null, 2));
-      if (err) {
-        setError(err.errors);
-      }
-      // if (err.errors[0].code === 'form_identifier_exists') {
-      //   setErrorMsg('The provided email address is already taken. Please provide another email address.')
-      // }
+      setError(err.errors);
+      setLoading(false);
     };
   };
 
@@ -106,28 +110,18 @@ export default function SignUpScreen() {
   // when the user starts verification process display the following content
   if (pendingVerification) {
     return (
-      <View>
-        <Text>Verify Your Email</Text>
-        <TextInput
-          placeholder='Enter your code!'
-          value={code}
-          onChangeText={setCode}
-        />
-        <Pressable onPress={onVerifyPress}>
-          <Text>Verify</Text>
-        </Pressable>
-      </View>
-    )
+      <VerificationScreen emailAddress={emailAddress} />
+    );
   }
 
   return (
     <View style={styles.container}>
-      {/* Back Button
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Ionicons name="chevron-back" size={24} color="black" />
-      </TouchableOpacity> */}
+      {/* /* Back Button */}
+      {/* <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                <Ionicons name="chevron-back" size={24} color="black" />
+              </TouchableOpacity>  */}
 
-      {/* Heading */}
+      {/*  Heading */}
       <Text style={styles.title}>Lets{"\n"}Get Started</Text>
 
       {/* Subtitle */}
@@ -157,6 +151,7 @@ export default function SignUpScreen() {
         <Ionicons name="mail-outline" size={20} color="#008000" style={styles.icon} />
         <TextInput
           autoCapitalize='none'
+          autoFocus={true}
           placeholder="Enter your email"
           style={styles.input}
           value={emailAddress}
@@ -175,24 +170,40 @@ export default function SignUpScreen() {
           onChangeText={setPassword}
           secureTextEntry={showPassword}
         />
-        <TouchableOpacity onPress={onShowPassword} style={styles.icon}>
+        <TouchableOpacity
+          onPress={onShowPassword}
+          style={styles.icon}>
           <MaterialIcons name="visibility-off" size={19} />
         </TouchableOpacity>
       </View>
 
       {/* Sign Up Button */}
-      <TouchableOpacity style={styles.signupButton} onPress={handleSignUp}>
-        <Text style={styles.signupText}>Sign up</Text>
+      <TouchableOpacity
+        style={[styles.signupButton, loading && styles.buttonDisabled]}
+        onPress={handleSignUp}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#008000" />
+
+        ) :
+          <Text style={styles.signupText}>Sign up</Text>
+        }
       </TouchableOpacity>
 
       {/* Login Link */}
       <Text style={styles.loginText}>
         Already have an account?{' '}
-        <Text style={styles.loginLink} onPress={() => router.push('/login')}>
-          Login
-        </Text>
+        <TouchableOpacity
+          onPress={() => router.push('/login')}
+          disabled={loading}
+        >
+          <Text style={styles.loginLink}>
+            Login
+          </Text>
+        </TouchableOpacity>
       </Text>
-    </View>
+    </View >
   );
 };
 
@@ -247,13 +258,19 @@ const styles = StyleSheet.create({
   },
   signupButton: {
     backgroundColor: '#008000',
-    paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 8,
+    padding: 10,
     alignItems: 'center',
-    marginTop: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
+    justifyContent: 'center',
+    minHeight: 30,
+    // backgroundColor: '#008000',
+    // paddingVertical: 14,
+    // borderRadius: 12,
+    // alignItems: 'center',
+    // marginTop: 10,
+    // shadowColor: '#000',
+    // shadowOpacity: 0.1,
+    // shadowOffset: { width: 0, height: 2 },
   },
   signupText: {
     color: '#fff',

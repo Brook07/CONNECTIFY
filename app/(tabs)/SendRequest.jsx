@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from "react";
+import { useNavigation } from "@react-navigation/native";
+import { useEffect, useState } from "react";
 import {
-  View,
-  Text,
+  Alert,
   FlatList,
   Image,
   Pressable,
   StyleSheet,
-  Alert,
+  Text,
+  View,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
 import useGetUserID from "../hooks/useGetUserID";
 
 const SendRequest = () => {

@@ -5,7 +5,7 @@ export default function RequestButton({ onPress, iconName, iconColor, label, lab
 
     return (
         <Pressable style={styles.iconButtonContainer} onPress={onPress}>
-            <MaterialIcons name={iconName} size={20} color={iconColor} />
+            <MaterialIcons name={iconName} size={22} color={iconColor} />
             <Text style={labelStyle}>{label}</Text>
         </Pressable>
     );

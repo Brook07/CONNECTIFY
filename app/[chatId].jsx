@@ -29,6 +29,8 @@ const socket = io(`${BASE_URL}`);  // Localhost for Android emulator
 
 
 const ChatMessagesScreen = () => {
+    //const [modalVisible, setModalVisible] = useState(false);
+
   const { chatId } = useLocalSearchParams();
   const [receiverId, setReceiverId]= useState(null);
   const [chat, setChat]= useState(null);
@@ -131,10 +133,9 @@ useEffect(()=>{
 
 //const receiverId = chat.user1_id === userId ? chat.user2_id : chat.user1_id;
 // id: result 
-
 const pickImage = async () => {
   let result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.All,
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
     allowsEditing: true,
     aspect: [4, 3],
     quality: 1,
@@ -156,6 +157,28 @@ const pickImage = async () => {
     setMessages((prev) => [...prev, newImageMessage]);
   }
 };
+
+
+
+const sendImageMessage = (imageUrl) => {
+  const messageText = "Photo file(s) are received.";
+  const encryptedText = CryptoJS.AES.encrypt(messageText, SHARED_SECRET_KEY).toString();
+
+  const imageMessage = {
+    _id: uuidv4(),
+    messageType: "image",
+    message: encryptedText,
+    imageUrl: imageUrl,
+    timeStamp: new Date(),
+    senderId: userId,
+    chatId: chatId,
+    receiverId: receiverId,
+  };
+
+  socket.emit("sendMessage", imageMessage);
+  setMessages((prev) => [...prev, imageMessage]);
+};
+
 
 
 
@@ -264,7 +287,7 @@ const handleSend = () => {
                 }}
               >
                 <Image
-                  source={{ uri: item.image_url }}
+                  source={{ uri: fullImageUrl }}
                   style={{ width: 200, height: 200, borderRadius: 7 }}
                 />
                 <Text
@@ -398,6 +421,8 @@ const handleSend = () => {
 
     </KeyboardAvoidingView>
   );
+ 
+
 };
 
 export default ChatMessagesScreen;

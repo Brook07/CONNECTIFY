@@ -1,4 +1,4 @@
-import {neon} from "@neondatabase/serverless";
+import { neon } from "@neondatabase/serverless";
 import "dotenv/config";
 
 // creates a sql connection using the database url

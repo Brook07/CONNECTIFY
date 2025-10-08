@@ -12,8 +12,9 @@ export default function UserProfileFeed({ smallImgSource, userName, profileFeedI
     if (status === null) {
         console.log(status);
         return (
+            <>
                 <LinearGradient
-                    colors={["#fff", "#fff"]}
+                    colors={["#008000", "#b2f7b2"]}
                     style={styles.border}
                 >
                     <View style={[styles.userFeed1, Platform.OS === 'web' && { width: 450 }]}>
@@ -27,39 +28,40 @@ export default function UserProfileFeed({ smallImgSource, userName, profileFeedI
                             <Image source={profileFeedImgSource} style={styles.profileFeedImage}></Image>
                         </View>
                         <View style={styles.buttonContainer}>
-                            <RequestButton onPress={() => { setStatus(false) }} iconName="remove-circle-outline" label="Remove" iconColor="red" labelStyle={{ fontFamily: "Poppins_500Medium", fontSize: 14, marginLeft: 2 }} />
-                            <View style={{ width: 2, height: '100%', backgroundColor: '#000', marginHorizontal: 1 }} />
                             <RequestButton onPress={() => { setStatus(true) }} iconName="check-circle-outline" label="Send Request" iconColor="green" labelStyle={{ fontFamily: "Poppins_500Medium", fontSize: 14, marginLeft: 2 }} />
+                        </View>
+                    </View >
+                </LinearGradient>
+                <View style={{ padding: 5 }}>
+                </View>
+            </>
+        );
+    } else {
+        console.log(status);
+        return (
+            <>
+                <LinearGradient
+                    colors={["#008000", "#b2f7b2"]}
+                    style={styles.border}
+                >
+                    <View style={[styles.userFeed1, Platform.OS === 'web' && { width: 450 }]}>
+                        <View style={styles.profileTitleContainer}>
+                            <Image source={smallImgSource} style={styles.profileSmallImage}></Image>
+                            <View style={styles.profileUserNameContainer}>
+                                <Text style={[styles.profileUserName]}>{userName}</Text>
+                            </View>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <Image source={profileFeedImgSource} style={styles.profileFeedImage}></Image>
+                        </View>
+                        <View style={styles.buttonContainer}>
+                            <RequestButton iconName="check-circle" label="Request Sent!" iconColor="green" labelStyle={{ fontFamily: "Poppins_500Medium", fontSize: 14 }} />
                         </View>
                     </View>
                 </LinearGradient>
-        );
-    } else if (status === true) {
-        console.log(status);
-        return (
-            <LinearGradient
-                colors={["#fff", "#ffff"]}
-                style={styles.border}
-            >
-                <View style={[styles.userFeed1, Platform.OS === 'web' && { width: 450 }]}>
-                    <View style={styles.profileTitleContainer}>
-                        <Image source={smallImgSource} style={styles.profileSmallImage}></Image>
-                        <View style={styles.profileUserNameContainer}>
-                            <Text style={[styles.profileUserName]}>{userName}</Text>
-                        </View>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                        <Image source={profileFeedImgSource} style={styles.profileFeedImage}></Image>
-                    </View>
-                    <View style={styles.buttonContainer}>
-                        <RequestButton iconName="check-circle" label="Request Sent!" iconColor="green" labelStyle={{ fontFamily: "Poppins_500Medium", fontSize: 14 }} />
-                    </View>
+                <View style={{ padding: 5 }}>
                 </View>
-            </LinearGradient>
-        );
-    } else {
-        return (
-            null
+            </>
         );
     }
 }
@@ -67,8 +69,8 @@ export default function UserProfileFeed({ smallImgSource, userName, profileFeedI
 const styles = StyleSheet.create({
 
     border: {
-        padding: 10,
-        // borderRadius: 10,
+        padding: 5,
+        borderRadius: 5,
     },
 
     userFeed1: {

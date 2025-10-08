@@ -1,40 +1,45 @@
+import { useClerk } from '@clerk/clerk-expo';
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Linking from 'expo-linking';
+import { router } from 'expo-router';
 import { useState } from "react";
 import {
   Modal,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
-  View,
+  ActivityIndicator,
+  View
 } from "react-native";
+import ChangePasswordScreen from '../components/ChangePasswordScreen';
 import { Colors } from "./constants/theme";
-import { router } from 'expo-router';
-import { SignOutButton } from "../components/SignOutButton";
-import { useClerk } from '@clerk/clerk-expo'
-import * as Linking from 'expo-linking'
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import useGetUserID from "./hooks/useGetUserID";
+
 
 
 export default function SettingsScreen() {
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [logoutVisible, setLogoutVisible] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-
+  const [loading, setLoading] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const { signOut } = useClerk();
+  const { userId: userId, loading: idLoading } = useGetUserID();
+
 
   const handleSignOut = async () => {
     try {
-       // Clear AsyncStorage first
+      // Clear AsyncStorage first
       await AsyncStorage.clear();
-      await signOut()
+      await signOut();
       // Redirect to your desired page
-       // ⚠️ Wait briefly to ensure session is cleared
-   
+      // ⚠️ Wait briefly to ensure session is cleared
+
       Linking.openURL(Linking.createURL('/login'))
     } catch (err) {
       // See https://clerk.com/docs/custom-flows/error-handling
@@ -43,29 +48,16 @@ export default function SettingsScreen() {
     }
   }
 
-  const handleChangePassword = () => {
-    if (!oldPassword || !newPassword || !confirmNewPassword) {
-      alert("All fields are required.");
-      return;
-    }
-    if (newPassword !== confirmNewPassword) {
-      alert("New passwords do not match.");
-      return;
-    }
-
-    console.log("Password changed");
-    alert("Password updated successfully.");
-    setOldPassword("");
-    setNewPassword("");
-    setConfirmNewPassword("");
-    setShowChangePassword(false);
-  };
-
   const handleLogoutConfirm = () => {
     console.log("User logged out");
     setLogoutVisible(false);
     // Add logout logic here
   };
+
+
+  const updateAddress=  ()=>{
+    router.push(`/map`);
+  }
 
   const bgColor = darkMode ? "#000" : Colors.white;
   const textColor = darkMode ? Colors.white : Colors.black;
@@ -86,80 +78,91 @@ export default function SettingsScreen() {
       </View>
       <ScrollView contentContainerStyle={[styles.container, { backgroundColor: bgColor }]}>
 
-        {/* Change Password Option */}
-        <TouchableOpacity
-          style={styles.optionRow}
-          onPress={() => setShowChangePassword(!showChangePassword)}
-        >
-          <Ionicons name="lock-closed-outline" size={24} color={Colors.primary} />
-          <Text style={[styles.optionText, { color: textColor }]}>Change Password</Text>
-          <Ionicons name="chevron-forward" size={20} color={Colors.grey} />
-        </TouchableOpacity>
 
-        {showChangePassword && (
-          <View style={styles.passwordForm}>
-            <TextInput
-              placeholder="Old Password"
-              placeholderTextColor={darkMode ? "#aaa" : "#555"}
-              style={[
-                styles.input,
-                { backgroundColor: inputBg, color: textColor, borderColor: borderColor },
-              ]}
-              secureTextEntry
-              value={oldPassword}
-              onChangeText={setOldPassword}
-            />
-            <TextInput
-              placeholder="New Password"
-              placeholderTextColor={darkMode ? "#aaa" : "#555"}
-              style={[
-                styles.input,
-                { backgroundColor: inputBg, color: textColor, borderColor: borderColor },
-              ]}
-              secureTextEntry
-              value={newPassword}
-              onChangeText={setNewPassword}
-            />
-            <TextInput
-              placeholder="Confirm New Password"
-              placeholderTextColor={darkMode ? "#aaa" : "#555"}
-              style={[
-                styles.input,
-                { backgroundColor: inputBg, color: textColor, borderColor: borderColor },
-              ]}
-              secureTextEntry
-              value={confirmNewPassword}
-              onChangeText={setConfirmNewPassword}
-            />
-            <TouchableOpacity style={styles.submitButton} onPress={handleChangePassword}>
-              <Text style={styles.submitButtonText}>Submit</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+
+
+
+
+
+
+       
+  <TouchableOpacity
+    style={[styles.optionRow, { backgroundColor: '#0066cc', borderColor: '#0066cc', marginBottom: 15 }]}
+    onPress={() => {
+      // Add your handler here
+      console.log("Update Preferences");
+    }}
+  >
+    <Text style={[styles.optionText, { color: '#fff', textAlign: 'center', flex: 1 }]}
+    onPress={() => router.push('/update_preferences')}>
+      Update Preferences
+    </Text>
+  </TouchableOpacity>
+
+
+
+
+
+
+
+
+         {/* Update Temporary Address Button */}
+  <TouchableOpacity
+    style={[styles.optionRow, { backgroundColor: '#0066cc', borderColor: '#0066cc', marginBottom: 15 }]}
+    onPress={() => {
+      // Add your handler here
+      console.log("Update Temporary Address button pressed");
+    }}
+  >
+    <Text style={[styles.optionText, { color: '#fff', textAlign: 'center', flex: 1 }]}
+    onPress={() => router.push('/map')}>
+      Update Temporary Address
+    </Text>
+  </TouchableOpacity>
+
+        {/* Change Password Option */}
+        {/* <TouchableOpacity
+        style={styles.optionRow}
+        onPress={() => setShowChangePassword(!showChangePassword)}
+      >
+        <Ionicons name="lock-closed-outline" size={24} color={Colors.primary} />
+        <Text style={[styles.optionText, { color: textColor }]}>Change Password</Text>
+        <Ionicons name="chevron-forward" size={20} color={Colors.grey} />
+      </TouchableOpacity> */}
+
 
         {/* Theme Toggle Option */}
-        <TouchableOpacity
-          style={styles.optionRow}
-          onPress={() => setDarkMode(!darkMode)}
-        >
-          <Ionicons name="moon-outline" size={24} color={Colors.primary} />
-          <Text style={[styles.optionText, { color: textColor }]}>
-            {darkMode ? "Dark Mode" : "Light Mode"}
-          </Text>
-          <Ionicons name="chevron-forward" size={20} color={Colors.grey} />
-        </TouchableOpacity>
+        {/* <TouchableOpacity
+        style={styles.optionRow}
+        onPress={() => setDarkMode(!darkMode)}
+      >
+        <Ionicons name="moon-outline" size={24} color={Colors.primary} />
+        <Text style={[styles.optionText, { color: textColor }]}>
+          {darkMode ? "Dark Mode" : "Light Mode"}
+        </Text>
+        <Ionicons name="chevron-forward" size={20} color={Colors.grey} />
+      </TouchableOpacity> */}
 
         {/* Logout Option */}
         <TouchableOpacity
           style={styles.optionRow}
           onPress={() => {
+            setLoading(true);
             setLogoutVisible(true);
           }
           }
         >
-          <Ionicons name="log-out-outline" size={24} color="red" />
-          <Text style={[styles.optionText, { color: "red" }]}>Logout</Text>
-          <Ionicons name="chevron-forward" size={20} color={Colors.grey} />
+          {
+            loading ? (
+              <ActivityIndicator style={{}} color={Colors.grey} />
+            ) : (
+              <>
+                <Ionicons name="log-out-outline" size={24} color="#fff" style={{ paddingHorizontal: 10 }} />
+                <Text style={[styles.optionText, { color: "#fff" }]}>Logout</Text>
+                <Ionicons name="chevron-forward" size={20} color={Colors.grey} />
+              </>
+            )
+          }
         </TouchableOpacity>
 
         {/* Custom Modal */}
@@ -183,15 +186,32 @@ export default function SettingsScreen() {
               <View style={styles.modalActions}>
                 <TouchableOpacity
                   style={[styles.cancelButton, { backgroundColor: Colors.grey }]}
-                  onPress={() => setLogoutVisible(false)}
+                  disabled={!loading}
+                  onPress={() => {
+                    setLoading(false);
+                    setLogoutLoading(false);
+                    setLogoutVisible(false);
+                  }}
                 >
+
                   <Text style={styles.cancelButtonText}>Cancel</Text>
+
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   style={styles.logoutButton}
-                  onPress={handleSignOut}
+                  onPress={() => {
+                    handleSignOut();
+                    setLogoutLoading(true);
+                  }}
                 >
-                  <Text style={styles.logoutButtonText}>Logout</Text>
+                  {
+                    logoutLoading ? (
+                      <ActivityIndicator style={{}} color={Colors.grey} />
+                    ) : (
+                      <Text style={styles.logoutButtonText}>Logout</Text>
+                    )
+                  }
                 </TouchableOpacity>
               </View>
             </View>
@@ -218,15 +238,17 @@ const styles = StyleSheet.create({
   optionRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "space-around",
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderColor: Colors.grey,
+    borderWidth: 2,
+    borderRadius: 8,
+    backgroundColor: '#bf0603',
+    borderColor: '#bf0603',
   },
   optionText: {
     flex: 1,
     fontSize: 16,
-    marginHorizontal: 10,
+    marginHorizontal: 2,
   },
   passwordForm: {
     marginTop: 20,

@@ -1,8 +1,8 @@
-import mysql2 from 'mysql2';
-import express from 'express';
-import dotenv from 'dotenv';
 import cors from 'cors';
-import signUpRoute from './routes/signUpRoute.js'
+import dotenv from 'dotenv';
+import express from 'express';
+import mysql2 from 'mysql2';
+import signUpRoute from './routes/signUpRoute.js';
 
 dotenv.config();
 
