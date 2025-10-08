@@ -68,6 +68,44 @@ export default function SignUpScreen() {
     };
   };
 
+  // handle submission of verification form
+  const onVerifyPress = async () => {
+
+    try {
+      // attempt for verification with the code provided by the user against the code sent
+      const signUpAttempt = await signUp.attemptEmailAddressVerification({ code });
+      // returns object with current signUp status, sessionid
+
+      // if the verification process is completed set user to active and redirect to another page
+      if (signUpAttempt.status === "complete") {
+        // ✅ Send user email to backend MySQL
+        // const response = await fetch(`${BASE_URL}/api/add-user`, {
+        //   method: 'POST',
+        //   headers: {
+        //     'Content-Type': 'application/json',
+        //   },
+        //   body: JSON.stringify({ email: emailAddress }),
+        // });
+
+        // if (!response.ok) {
+        //   console.log("API call failed!!");
+        // }
+
+        await setActive({ session: signUpAttempt.createdSessionId });
+
+        router.replace('/');
+      }
+      else {
+        // if the status is not 'complete' then check why
+        console.error(JSON.stringify(error, null, 2));
+      }
+    }
+    catch (err) {
+      console.error(JSON.stringify(err, null, 2));
+    };
+  };
+
+  if (!isLoaded) return <Text>Loading.....</Text>;
 
   // when the user starts verification process display the following content
   if (pendingVerification) {
@@ -247,8 +285,5 @@ const styles = StyleSheet.create({
   loginLink: {
     color: '#008000',
     fontWeight: '500',
-  },
-  buttonDisabled: {
-    backgroundColor: '#ccc',
   },
 });

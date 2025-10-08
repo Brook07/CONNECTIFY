@@ -2,8 +2,7 @@ const mysql = require('mysql2');
 const dotenv = require('dotenv');
 dotenv.config();
 
-const schema = `
-CREATE DATABASE IF NOT EXISTS chat_app;
+const schema = `CREATE DATABASE IF NOT EXISTS chat_app;
 
 CREATE TABLE IF NOT EXISTS message_requests (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -27,14 +26,32 @@ CREATE TABLE IF NOT EXISTS messages (
   message TEXT,
   message_type ENUM('text', 'image') NOT NULL,
   image_url TEXT,
-  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+  bio VARCHAR(255)
 );
 
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
-  profile_image TEXT
+  email TEXT,
+  DoB DATE,
+  Gender ENUM('Male', 'Female', 'Other'),
+  Address TEXT,
+  Contact TEXT,
+  profile_image TEXT,
+  bio VARCHAR(255)
 );
+alter table ongoing_chats add column last_message1 int;
+alter table ongoing_chats add column last_message2 int;
+ALTER TABLE users MODIFY name VARCHAR(255) NULL;
+
+CREATE TABLE IF NOT EXISTS user_photos (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  user_id INT,
+  image_path VARCHAR(255),
+  uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);`;
 
 CREATE TABLE IF NOT EXISTS preferences (
   id INT AUTO_INCREMENT PRIMARY KEY,
