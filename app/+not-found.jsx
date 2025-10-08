@@ -9,7 +9,7 @@ export default function NotFound() {
                 <Text style={styles.fonts}>
                     NOT FOUND!!!
                 </Text>
-                <Link href="/home">Go to HOME PAGE</Link>
+                <Link href="/">Go to Home Page</Link>
             </View>
         </>
     );

@@ -1,8 +1,7 @@
-import { Stack, Tabs, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { MaterialIcons } from "@expo/vector-icons";
-import { TouchableOpacity } from 'react-native';
-import { SignedIn, SignedOut, useUser } from '@clerk/clerk-expo'
+import { Tabs, useRouter } from "expo-router";
+import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { TouchableOpacity, Text, View, StyleSheet } from 'react-native';
+import { SignedIn, SignedOut, useUser } from '@clerk/clerk-expo';
 
 
 export default function TabsLayout() {
@@ -54,10 +53,24 @@ export default function TabsLayout() {
                 </Tabs>
             </SignedIn>
             <SignedOut>
-                <Stack>
-                    <Stack.Screen name="login" />
-                </Stack>
+                <View style={styles.container}>
+                    <TouchableOpacity
+                        onPress={() => {
+                            router.replace('/login');
+                        }}>
+                        <Text style={{ fontSize: 20, fontWeight: '600' }}>
+                            You are not Signed in!! Click here to sign in.
+                        </Text>
+                    </TouchableOpacity>
+                </View>
             </SignedOut>
         </>
     );
 }
+
+const styles = StyleSheet.create({
+    container: {
+        alignItems: 'center',
+        backgroundColor: '#0cd42dff'
+    }
+});

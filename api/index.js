@@ -1,7 +1,9 @@
+const {BASE_URL} = require("../config/config");
 const express = require("express");
 const bodyParser = require("body-parser");
 const db = require('./database');
-
+const path = require('path');
+const multer = require("multer");
 const http = require("http");
 const socketIo = require("socket.io");
 const app = express();
@@ -16,6 +18,7 @@ app.use(express.json());
 
 const port = 8000;
 const cors = require("cors");
+// const { BounceIn } = require("react-native-reanimated");
 app.use(cors());
 
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -318,5 +321,149 @@ app.delete("/delete_chat/:chatId", (req, res) => {
   db.query("DELETE FROM ongoing_chats WHERE id = ?", [chatId], (err) => {
     if (err) return res.status(500).send("Failed");
     res.sendStatus(200);
+  });
+});
+
+app.post('/update-user-by-id', (req, res) => {
+  const { userId, userName, dob, gender, address, contact, bio } = req.body;
+
+  if (!userId || !userName || !dob || !gender || !address || !contact ) {
+    return res.status(400).json({ error: "All fields are required." });
+  }
+
+  const query = `
+    UPDATE users 
+    SET Name = ?, dob = ?, gender = ?, address = ?, contact = ?, Bio = ?
+    WHERE id = ?
+  `;
+
+  const values = [userName, dob, gender, address, contact, bio, userId];
+
+  db.query(query, values, (err, result) => {
+    if (err) {
+      console.error("❌ Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    return res.status(200).json({ message: "User profile updated successfully" });
+  });
+});
+
+app.post('/get-user-by-id', (req, res) => {
+  const { userId } = req.body;
+
+  if (!userId) return res.status(400).json({ error: "User ID is required" });
+
+  const query = 'SELECT Name, dob, gender, address, contact, Bio FROM users WHERE id = ?';
+
+  db.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error("DB error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    return res.status(200).json(results[0]);
+  });
+});
+
+
+// Disk storage config
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/'); // Make sure this directory exists
+  },
+  filename: function (req, file, cb) {
+    const filename = Date.now() + '-' + file.originalname;
+    cb(null, filename);
+  }
+});
+
+const upload = multer({ storage });
+
+app.post('/upload-pfp', upload.single('pfp'), (req, res) => {
+  const userId = req.body.userId;
+  const file = req.file;
+
+  console.log("userId:", userId);
+  console.log("uploaded file:", file);
+
+  if (!file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+
+  if (!userId) {
+    return res.status(400).json({ error: 'User ID is required' });
+  }
+
+  const imagePath = `/uploads/${file.filename}`; // relative path to serve later
+
+  const query = `UPDATE users SET profile_image = ? WHERE id = ?`;
+  db.query(query, [imagePath, userId], (err, result) => {
+    if (err) {
+      console.error("DB error while updating image:", err);
+      return res.status(500).json({ error: 'Failed to update profile image in database' });
+    }
+
+    res.status(200).json({
+      message: 'Image uploaded and profile updated successfully',
+      url: `${BASE_URL}${imagePath}`
+    });
+  });
+});
+
+//Retrieve profile info
+app.get('/user/:id', (req, res) => {
+  const userId = req.params.id;
+
+  const query = 'SELECT Name, dob, gender, address, contact, profile_image, Bio FROM users WHERE id = ?';
+
+  db.query(query, [userId], (err, results) => {
+    if (err) return res.status(500).json({ error: "Database error" });
+
+    if (results.length === 0) return res.status(404).json({ error: "User not found" });
+
+    return res.status(200).json(results[0]);
+  });
+});
+
+//Multiphoto upload
+app.post('/upload-photo', upload.single('image'), (req, res) => {
+  const { userId } = req.body;
+
+  if (!req.file || !userId) {
+    return res.status(400).json({ error: 'Missing file or userId' });
+  }
+
+  const imagePath = `uploads/${req.file.filename}`;
+  const sql = `INSERT INTO user_photos (user_id, image_path) VALUES (?, ?)`;
+
+  db.query(sql, [userId, imagePath], (err, result) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+
+    return res.status(200).json({
+      message: 'Photo uploaded',
+      imagePath: imagePath,
+    });
+  });
+});
+
+//Retrieve Photo
+app.get('/user-photos/:userId', (req, res) => {
+  const { userId } = req.params;
+
+  const sql = `SELECT image_path FROM user_photos WHERE user_id = ?`;
+
+  db.query(sql, [userId], (err, results) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+
+    res.status(200).json(results);
   });
 });

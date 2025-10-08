@@ -2,22 +2,34 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useSignUp } from '@clerk/clerk-expo';
-import { Pressable, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Pressable, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList } from 'react-native';
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { BASE_URL } from "../../config/config"; // adjust the path as needed
 
 
-const SignUpScreen = () => {
+export default function SignUpScreen() {
   const { signUp, isLoaded, setActive } = useSignUp();
   const [pendingVerification, setPendingVerification] = useState(false);
   const [code, setCode] = useState('');
-  // const [name, setName] = useState('');
   const [emailAddress, setEmailAddress] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(true);
 
-  
+  const onShowPassword = () => {
+    if (showPassword) {
+      setShowPassword(false);
+    } else {
+      setShowPassword(true);
+    }
+  }
+
 
   // handle submission of sign up form
   const handleSignUp = async () => {
+
+    setError(undefined);
+
     if (!emailAddress || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
@@ -43,12 +55,17 @@ const SignUpScreen = () => {
     }
     catch (err) {
       console.error(JSON.stringify(err, null, 2));
-    }
+      if (err) {
+        setError(err.errors);
+      }
+      // if (err.errors[0].code === 'form_identifier_exists') {
+      //   setErrorMsg('The provided email address is already taken. Please provide another email address.')
+      // }
+    };
   };
 
   // handle submission of verification form
   const onVerifyPress = async () => {
-    if(!isLoaded) return;
 
     try {
       // attempt for verification with the code provided by the user against the code sent
@@ -57,18 +74,22 @@ const SignUpScreen = () => {
 
       // if the verification process is completed set user to active and redirect to another page
       if (signUpAttempt.status === "complete") {
+        // ✅ Send user email to backend MySQL
+        // const response = await fetch(`${BASE_URL}/api/add-user`, {
+        //   method: 'POST',
+        //   headers: {
+        //     'Content-Type': 'application/json',
+        //   },
+        //   body: JSON.stringify({ email: emailAddress }),
+        // });
+
+        // if (!response.ok) {
+        //   console.log("API call failed!!");
+        // }
+
         await setActive({ session: signUpAttempt.createdSessionId });
 
-      // ✅ Send user email to backend MySQL
-      await fetch(`${BASE_URL}/api/add-user`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: emailAddress }),
-      });
-      
-        router.replace('/set_preferences');
+        router.replace('/');
       }
       else {
         // if the status is not 'complete' then check why
@@ -77,8 +98,10 @@ const SignUpScreen = () => {
     }
     catch (err) {
       console.error(JSON.stringify(err, null, 2));
-    }
-  }
+    };
+  };
+
+  if (!isLoaded) return <Text>Loading.....</Text>;
 
   // when the user starts verification process display the following content
   if (pendingVerification) {
@@ -105,48 +128,56 @@ const SignUpScreen = () => {
       </TouchableOpacity> */}
 
       {/* Heading */}
-      <Text style={styles.title}>
-        Let{"'"}s{"\n"}<Text style={styles.bold}>Get Started</Text>
-      </Text>
+      <Text style={styles.title}>Lets{"\n"}Get Started</Text>
 
       {/* Subtitle */}
       <Text style={styles.subtitle}>Please fill the details to create an account</Text>
 
-      {/* Name Input */}
-      {/* <View style={styles.inputContainer}>
-        <Ionicons name="person-outline" size={20} color="#008000" style={styles.icon} />
-        <TextInput
-          placeholder="Enter your name"
-          style={styles.input}
-          value={name}
-          onChangeText={setName}
-        />
-      </View> */}
+      {/* error messages */}
+      {
+        error &&
+        <View style={styles.errorContainer}>
+          <FlatList
+            data={error}
+            renderItem={(item) => {
+              { console.log(item.item.longMessage); }
+              return (
+                <View key={item.item.code} style={{ flexDirection: 'row', padding: 6 }}>
+                  <MaterialIcons name='error-outline' size={23} color='red' />
+                  <Text style={styles.errorMsg}>{item.item.longMessage}</Text>
+                </View>
+              )
+            }}
+          />
+        </View>
+      }
 
       {/* Email Input */}
       <View style={styles.inputContainer}>
         <Ionicons name="mail-outline" size={20} color="#008000" style={styles.icon} />
         <TextInput
-        autoCapitalize='none'
+          autoCapitalize='none'
           placeholder="Enter your email"
           style={styles.input}
           value={emailAddress}
-          onChangeText={(email)=> setEmailAddress(email)}
+          onChangeText={(email) => setEmailAddress(email)}
           keyboardType="email-address"
         />
       </View>
 
       {/* Password Input */}
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, { justifyContent: 'space-between' }]}>
         <Ionicons name="lock-closed-outline" size={20} color="#008000" style={styles.icon} />
         <TextInput
-        autoCapitalize='none'
           placeholder="Enter your password"
           style={styles.input}
           value={password}
-          onChangeText={(password)=>setPassword(password)}
-          // secureTextEntry={true}
+          onChangeText={setPassword}
+          secureTextEntry={showPassword}
         />
+        <TouchableOpacity onPress={onShowPassword} style={styles.icon}>
+          <MaterialIcons name="visibility-off" size={19} />
+        </TouchableOpacity>
       </View>
 
       {/* Sign Up Button */}
@@ -165,9 +196,17 @@ const SignUpScreen = () => {
   );
 };
 
-export default SignUpScreen;
-
 const styles = StyleSheet.create({
+  errorContainer: {
+    borderRadius: 10,
+    backgroundColor: '#ffc8c8ff',
+    marginBottom: 5,
+    marginHorizontal: 1,
+  },
+  errorMsg: {
+    paddingHorizontal: 5,
+    fontSize: 15,
+  },
   container: {
     flex: 1,
     padding: 24,
@@ -181,16 +220,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '400',
-    marginBottom: 10,
-  },
-  bold: {
     fontWeight: '700',
+    marginBottom: 10,
   },
   subtitle: {
     fontSize: 14,
     color: 'gray',
-    marginBottom: 30,
+    marginBottom: 15,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -199,15 +235,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     marginBottom: 20,
-    paddingHorizontal: 12,
     backgroundColor: '#f9f9f9',
   },
   icon: {
-    marginRight: 10,
+    marginHorizontal: 10,
   },
   input: {
     flex: 1,
     height: 48,
+    paddingHorizontal: 10,
   },
   signupButton: {
     backgroundColor: '#008000',
